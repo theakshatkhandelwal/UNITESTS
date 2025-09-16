@@ -340,6 +340,22 @@ def health_check():
         }
     })
 
+@app.route('/init-db')
+def init_database():
+    """Initialize database tables for Vercel deployment"""
+    try:
+        with app.app_context():
+            db.create_all()
+            return jsonify({
+                "status": "success",
+                "message": "Database tables created successfully"
+            })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Database initialization failed: {str(e)}"
+        }), 500
+
 @app.route('/sitemap.xml')
 def sitemap():
     return send_file('static/sitemap.xml', mimetype='application/xml')
@@ -387,7 +403,8 @@ def signup():
             return redirect(url_for('login'))
         except Exception as e:
             print(f"Error in signup: {str(e)}")
-            flash('An error occurred. Please try again.', 'error')
+            db.session.rollback()
+            flash(f'Signup failed: {str(e)}', 'error')
             return redirect(url_for('signup'))
 
     return render_template('signup.html')
