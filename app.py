@@ -22,11 +22,17 @@ from datetime import datetime
 # Download NLTK data only when needed
 def ensure_nltk_data():
     try:
+        import nltk
         nltk.data.find('tokenizers/punkt')
         nltk.data.find('corpora/stopwords')
-    except LookupError:
-        nltk.download('punkt', quiet=True)
-        nltk.download('stopwords', quiet=True)
+    except (LookupError, ImportError):
+        try:
+            import nltk
+            nltk.download('punkt', quiet=True)
+            nltk.download('stopwords', quiet=True)
+        except ImportError:
+            # NLTK not available, skip
+            pass
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -284,6 +290,26 @@ def process_document(file_path):
 @app.route('/')
 def home():
     return render_template('home.html')
+
+@app.route('/health')
+def health_check():
+    """Simple health check endpoint for debugging"""
+    try:
+        # Test database connection
+        db.session.execute('SELECT 1')
+        db_status = "OK"
+    except Exception as e:
+        db_status = f"Error: {str(e)}"
+    
+    return jsonify({
+        "status": "OK",
+        "database": db_status,
+        "environment": {
+            "has_secret_key": bool(os.environ.get('SECRET_KEY')),
+            "has_google_api": bool(os.environ.get('GOOGLE_AI_API_KEY')),
+            "has_database_url": bool(os.environ.get('DATABASE_URL'))
+        }
+    })
 
 @app.route('/sitemap.xml')
 def sitemap():
@@ -1375,6 +1401,7 @@ with app.app_context():
         print(f"Using database: {app.config['SQLALCHEMY_DATABASE_URI']}")
     except Exception as e:
         print(f"Database initialization error: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
         # Continue running the app even if database fails
 
 if __name__ == '__main__':
