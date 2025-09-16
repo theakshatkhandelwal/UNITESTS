@@ -6,36 +6,54 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import google.generativeai as genai
 import json
 import re
-import PyPDF2
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
+# Conditional imports for optional dependencies
+try:
+    import PyPDF2
+    HAS_PYPDF2 = True
+except ImportError:
+    HAS_PYPDF2 = False
+
+try:
+    import nltk
+    from nltk.tokenize import word_tokenize
+    from nltk.corpus import stopwords
+    HAS_NLTK = True
+except ImportError:
+    HAS_NLTK = False
+
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    HAS_REPORTLAB = True
+except ImportError:
+    HAS_REPORTLAB = False
+
 from collections import Counter
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
 import io
 from datetime import datetime
 
 # Download NLTK data only when needed
 def ensure_nltk_data():
+    if not HAS_NLTK:
+        return
     try:
-        import nltk
         nltk.data.find('tokenizers/punkt')
         nltk.data.find('corpora/stopwords')
-    except (LookupError, ImportError):
+    except LookupError:
         try:
-            import nltk
             nltk.download('punkt', quiet=True)
             nltk.download('stopwords', quiet=True)
-        except ImportError:
-            # NLTK not available, skip
+        except Exception:
+            # NLTK download failed, skip
             pass
 
-app = Flask(__name__)
+# Configure Flask for Vercel (no instance folder)
+app = Flask(__name__, instance_relative_config=False)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+
 # Database configuration - use PostgreSQL on Vercel/NeonDB, SQLite locally
 database_url = os.environ.get('DATABASE_URL')
 if database_url and database_url.startswith('postgres://'):
@@ -260,6 +278,8 @@ def process_document(file_path):
         
         content = ""
         if file_path.lower().endswith('.pdf'):
+            if not HAS_PYPDF2:
+                return "PDF processing not available (PyPDF2 not installed)"
             with open(file_path, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
                 for page in pdf_reader.pages:
@@ -271,16 +291,20 @@ def process_document(file_path):
         if not content.strip():
             return None
 
-        tokens = word_tokenize(content.lower())
-        stop_words = set(stopwords.words('english'))
-        meaningful_words = [word for word in tokens if word.isalnum() and word not in stop_words]
+        if HAS_NLTK:
+            tokens = word_tokenize(content.lower())
+            stop_words = set(stopwords.words('english'))
+            meaningful_words = [word for word in tokens if word.isalnum() and word not in stop_words]
 
-        if not meaningful_words:
-            return None
+            if not meaningful_words:
+                return None
 
-        word_freq = Counter(meaningful_words)
-        main_topic = word_freq.most_common(1)[0][0].capitalize()
-        return main_topic
+            word_freq = Counter(meaningful_words)
+            main_topic = word_freq.most_common(1)[0][0].capitalize()
+            return main_topic
+        else:
+            # Fallback: return first 100 characters as topic
+            return content[:100].strip()
 
     except Exception as e:
         print(f"Error processing document: {str(e)}")
@@ -304,6 +328,11 @@ def health_check():
     return jsonify({
         "status": "OK",
         "database": db_status,
+        "dependencies": {
+            "has_pypdf2": HAS_PYPDF2,
+            "has_nltk": HAS_NLTK,
+            "has_reportlab": HAS_REPORTLAB
+        },
         "environment": {
             "has_secret_key": bool(os.environ.get('SECRET_KEY')),
             "has_google_api": bool(os.environ.get('GOOGLE_AI_API_KEY')),
