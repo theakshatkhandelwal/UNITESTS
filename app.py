@@ -352,12 +352,35 @@ def init_database():
             try:
                 # Check if we're using PostgreSQL (NeonDB)
                 if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
-                    # Alter the password_hash column to be longer
+                    # First, check if the table exists and get current column info
+                    result = db.session.execute("""
+                        SELECT column_name, data_type, character_maximum_length 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'user' AND column_name = 'password_hash'
+                    """).fetchone()
+                    
+                    if result:
+                        current_length = result[2] if result[2] else 0
+                        print(f"Current password_hash column length: {current_length}")
+                        
+                        if current_length < 255:
+                            # Alter the password_hash column to be longer
+                            db.session.execute('ALTER TABLE "user" ALTER COLUMN password_hash TYPE VARCHAR(255)')
+                            db.session.commit()
+                            print("Successfully updated password_hash column to VARCHAR(255)")
+                        else:
+                            print("password_hash column is already the correct size")
+                    else:
+                        print("password_hash column not found, will be created with correct size")
+                        
+            except Exception as alter_error:
+                print(f"Column alter error: {alter_error}")
+                # Try alternative approach - drop and recreate if needed
+                try:
                     db.session.execute('ALTER TABLE "user" ALTER COLUMN password_hash TYPE VARCHAR(255)')
                     db.session.commit()
-            except Exception as alter_error:
-                # Column might already be the right size or not exist yet
-                print(f"Column alter warning: {alter_error}")
+                except Exception as e2:
+                    print(f"Alternative alter failed: {e2}")
             
             return jsonify({
                 "status": "success",
@@ -367,6 +390,40 @@ def init_database():
         return jsonify({
             "status": "error",
             "message": f"Database initialization failed: {str(e)}"
+        }), 500
+
+@app.route('/fix-password-column')
+def fix_password_column():
+    """Fix the password_hash column size specifically"""
+    try:
+        with app.app_context():
+            if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
+                # Force update the password_hash column
+                db.session.execute('ALTER TABLE "user" ALTER COLUMN password_hash TYPE VARCHAR(255)')
+                db.session.commit()
+                
+                # Verify the change
+                result = db.session.execute("""
+                    SELECT character_maximum_length 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'user' AND column_name = 'password_hash'
+                """).fetchone()
+                
+                new_length = result[0] if result else 0
+                
+                return jsonify({
+                    "status": "success",
+                    "message": f"password_hash column updated to VARCHAR({new_length})"
+                })
+            else:
+                return jsonify({
+                    "status": "error",
+                    "message": "Not using PostgreSQL database"
+                })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Failed to fix password column: {str(e)}"
         }), 500
 
 @app.route('/sitemap.xml')
