@@ -80,7 +80,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(120), nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default='student', nullable=False)  # 'student' or 'teacher'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -345,10 +345,23 @@ def init_database():
     """Initialize database tables for Vercel deployment"""
     try:
         with app.app_context():
+            # Create all tables
             db.create_all()
+            
+            # Fix password_hash column size if needed
+            try:
+                # Check if we're using PostgreSQL (NeonDB)
+                if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
+                    # Alter the password_hash column to be longer
+                    db.session.execute('ALTER TABLE "user" ALTER COLUMN password_hash TYPE VARCHAR(255)')
+                    db.session.commit()
+            except Exception as alter_error:
+                # Column might already be the right size or not exist yet
+                print(f"Column alter warning: {alter_error}")
+            
             return jsonify({
                 "status": "success",
-                "message": "Database tables created successfully"
+                "message": "Database tables created and updated successfully"
             })
     except Exception as e:
         return jsonify({
