@@ -1,0 +1,30 @@
+name: unittest-app
+services:
+- name: web
+  source_dir: /
+  github:
+    repo: your-username/your-repo-name
+    branch: main
+  run_command: gunicorn app:app
+  environment_slug: python
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  routes:
+  - path: /
+  envs:
+  - key: FLASK_ENV
+    value: production
+  - key: PORT
+    value: "8080"
+  - key: SECRET_KEY
+    value: ${SECRET_KEY}
+  - key: GOOGLE_AI_API_KEY
+    value: ${GOOGLE_AI_API_KEY}
+  - key: DATABASE_URL
+    value: ${DATABASE_URL}
+
+databases:
+- name: unittest-db
+  engine: PG
+  version: "13"
+

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Preview Quiz - UniTest{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-lg-8">
+      <h2 class="mb-3">📝 Review Questions & Set Marks</h2>
+      <div class="alert alert-info">
+        <strong>Review each question below and set individual marks:</strong><br>
+        • You can give different marks to different questions (e.g., 1 mark for easy, 2-3 marks for difficult)<br>
+        • Total marks will be calculated automatically<br>
+        • After reviewing, click "Create Quiz Code" to generate the shareable code
+      </div>
+      
+      <div class="mb-3">
+        <strong>Quiz Title:</strong> {{ data.title }}<br>
+        <strong>Difficulty:</strong> {{ data.difficulty|title }}
+        {% if data.duration_minutes %} | <strong>Duration:</strong> {{ data.duration_minutes }} minutes{% endif %}
+      </div>
+
+      <form method="POST" action="{{ url_for('teacher_quiz_finalize') }}">
+        {% for q in data.questions %}
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Question {{ loop.index }}</h5>
+            <div class="input-group" style="max-width:150px;">
+              <span class="input-group-text">Marks:</span>
+              <input type="number" class="form-control" name="marks_{{ loop.index0 }}" value="{{ q.marks or 1 }}" min="1" max="10" required>
+            </div>
+          </div>
+          <div class="card-body">
+            <p class="fw-bold mb-3">{{ q.question }}</p>
+            {% if q.options %}
+            <div class="mb-3">
+              <strong>Options:</strong>
+              <ul class="mb-2">
+                {% for opt in q.options %}
+                  <li class="mb-1">{{ opt }}</li>
+                {% endfor %}
+              </ul>
+              <small class="text-success"><strong>✓ Correct Answer: {{ q.answer }}</strong></small>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        
+        <div class="card bg-light">
+          <div class="card-body text-center">
+            <h5>Total Questions: {{ data.questions|length }}</h5>
+            <p class="text-muted">Review all questions above and adjust marks as needed</p>
+          </div>
+        </div>
+        
+        <div class="mt-4 d-flex gap-2 justify-content-center">
+          <a href="{{ url_for('teacher_create_quiz_simple') }}" class="btn btn-outline-secondary btn-lg">
+            ← Back to Create Quiz
+          </a>
+          <button type="submit" class="btn btn-success btn-lg">
+            ✅ Create Quiz Code
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5>📋 Instructions</h5>
+        </div>
+        <div class="card-body">
+          <ol class="small">
+            <li><strong>Review each question</strong> - Make sure they're appropriate for your class</li>
+            <li><strong>Set individual marks</strong> - Easy questions: 1 mark, Medium: 2 marks, Hard: 3+ marks</li>
+            <li><strong>Check answers</strong> - Verify the correct answers are marked properly</li>
+            <li><strong>Create code</strong> - Click "Create Quiz Code" to generate the shareable code</li>
+            <li><strong>Share with students</strong> - Give them the code to join the quiz</li>
+          </ol>
+          <div class="alert alert-warning small">
+            <strong>Note:</strong> Once created, you cannot edit the questions or marks. Make sure everything is correct before finalizing.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Auto-calculate total marks
+document.addEventListener('DOMContentLoaded', function() {
+  const markInputs = document.querySelectorAll('input[name^="marks_"]');
+  const totalDiv = document.querySelector('.card.bg-light .card-body');
+  
+  function updateTotal() {
+    let total = 0;
+    markInputs.forEach(input => {
+      total += parseInt(input.value) || 0;
+    });
+    totalDiv.innerHTML = `
+      <h5>Total Questions: {{ data.questions|length }}</h5>
+      <h6 class="text-primary">Total Marks: ${total}</h6>
+      <p class="text-muted">Review all questions above and adjust marks as needed</p>
+    `;
+  }
+  
+  markInputs.forEach(input => {
+    input.addEventListener('input', updateTotal);
+  });
+  
+  updateTotal();
+});
+</script>
+{% endblock %}
+
+

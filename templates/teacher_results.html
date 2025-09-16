@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Results - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-0">Results: {{ quiz.title }}</h2>
+      <small class="text-muted">Share Code: <code>{{ quiz.code }}</code></small>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      {% if submissions %}
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Score</th>
+              <th>Percentage</th>
+              <th>Status</th>
+              <th>Integrity</th>
+              <th>Submitted At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in submissions %}
+            <tr>
+              <td>{{ student_map.get(s.student_id).username if student_map.get(s.student_id) else s.student_id }}</td>
+              <td>{{ '%.1f'|format(s.score) }}/{{ '%.1f'|format(s.total) }}</td>
+              <td>{{ '%.0f'|format(s.percentage) }}%</td>
+              <td>
+                {% if s.passed %}
+                  <span class="badge bg-success">Passed</span>
+                {% else %}
+                  <span class="badge bg-danger">Failed</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if s.is_full_completion %}
+                  <span class="badge bg-success" title="Completed all questions in fullscreen">✅ Clean</span>
+                {% else %}
+                  <span class="badge bg-warning" title="Partial/Exited fullscreen">⏸ Hold</span>
+                  <div class="small text-muted">Answered: {{ s.answered_count }}/{{ s.question_count }}</div>
+                  {% if s.fullscreen_exit_flag %}<div class="small text-danger">Exited fullscreen</div>{% endif %}
+                {% endif %}
+              </td>
+              <td>{{ s.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <p class="text-muted mb-0">No submissions yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

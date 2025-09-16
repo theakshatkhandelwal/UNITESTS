@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}UniTest - AI Learning Platform{% endblock %}</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="{% block description %}UniTest is an AI-powered learning platform that generates personalized quizzes and assessments using Google Gemini AI. Learn any topic with intelligent question generation and Bloom's taxonomy-based progression.{% endblock %}">
+    <meta name="keywords" content="{% block keywords %}AI learning, quiz generator, education technology, personalized learning, Bloom's taxonomy, AI assessment, online education, study platform, learning management system{% endblock %}">
+    <meta name="author" content="Akshat Khandelwal">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{% block og_title %}UniTest - AI-Powered Learning Platform{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Transform your learning experience with personalized AI-generated quizzes and intelligent assessment using Google Gemini AI.{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://unittest-ai.vercel.app">
+    <meta property="og:image" content="https://unittest-ai.vercel.app/static/og-image.png">
+    <meta property="og:site_name" content="UniTest">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}UniTest - AI-Powered Learning Platform{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Transform your learning experience with personalized AI-generated quizzes and intelligent assessment.{% endblock %}">
+    <meta name="twitter:image" content="https://unittest-ai.vercel.app/static/og-image.png">
+    
+    <!-- Additional SEO Tags -->
+    <link rel="canonical" href="https://unittest-ai.vercel.app{% block canonical_path %}{{ request.path }}{% endblock %}">
+    <meta name="theme-color" content="#4285f4">
+    <meta name="msapplication-TileColor" content="#4285f4">
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "UniTest",
+        "description": "AI-powered learning platform with personalized quiz generation and intelligent assessment",
+        "url": "https://unittest-ai.vercel.app",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "creator": {
+            "@type": "Person",
+            "name": "Akshat Khandelwal"
+        },
+        "featureList": [
+            "AI-Generated Questions",
+            "Bloom's Taxonomy Integration",
+            "Personalized Learning Paths",
+            "PDF Document Processing",
+            "Progress Tracking",
+            "Multiple Question Types"
+        ]
+    }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4285f4;
+            --secondary-color: #34a853;
+            --accent-color: #ea4335;
+            --gradient-bg: #1a73e8;
+            --gradient-fg: #4285f4;
+            
+            /* Light mode variables */
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --card-bg: #ffffff;
+            --border-color: #e9ecef;
+            --navbar-bg: linear-gradient(135deg, var(--gradient-bg), var(--gradient-fg));
+        }
+        
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
+            --card-bg: #2d2d2d;
+            --border-color: #404040;
+            --navbar-bg: linear-gradient(135deg, #0d47a1, #1565c0);
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--gradient-bg);
+            border-color: var(--gradient-bg);
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        [data-theme="dark"] .card {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--gradient-bg), var(--gradient-fg));
+            color: white;
+            padding: 80px 0;
+        }
+        
+        .feature-card {
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(66, 133, 244, 0.25);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+        
+        .form-select {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+        
+        .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(66, 133, 244, 0.25);
+        }
+        
+        .bg-gradient {
+            background: linear-gradient(135deg, var(--gradient-bg), var(--gradient-fg)) !important;
+        }
+        
+        .text-white {
+            color: white !important;
+        }
+        
+        .card.bg-gradient {
+            color: white !important;
+        }
+        
+        .card.bg-gradient h2,
+        .card.bg-gradient p {
+            color: white !important;
+        }
+        
+        .btn-light {
+            background-color: white !important;
+            color: var(--gradient-bg) !important;
+            border-color: white !important;
+        }
+        
+        .btn-light:hover {
+            background-color: #f8f9fa !important;
+            color: var(--gradient-bg) !important;
+        }
+        
+        /* Theme Toggle Button */
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1.1rem;
+            padding: 8px 10px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .theme-toggle:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+        }
+        
+        .theme-toggle i {
+            font-size: 1rem;
+        }
+        
+        /* Dark mode specific styles */
+        [data-theme="dark"] .navbar {
+            background: var(--navbar-bg) !important;
+        }
+        
+        [data-theme="dark"] .bg-light {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+        }
+        
+        [data-theme="dark"] .text-muted {
+            color: #adb5bd !important;
+        }
+        
+        [data-theme="dark"] .border {
+            border-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .progress {
+            background-color: #404040;
+        }
+        
+        [data-theme="dark"] .alert-info {
+            background-color: #0c5460;
+            border-color: #0c5460;
+            color: #d1ecf1;
+        }
+        
+        [data-theme="dark"] .alert-success {
+            background-color: #0f5132;
+            border-color: #0f5132;
+            color: #d1e7dd;
+        }
+        
+        [data-theme="dark"] .alert-danger {
+            background-color: #842029;
+            border-color: #842029;
+            color: #f8d7da;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: var(--navbar-bg);">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('home') }}">
+                <i class="fas fa-graduation-cap me-2"></i>UniTest
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                                <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('quiz') }}">
+                                <i class="fas fa-question-circle me-1"></i>Start Quiz
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt me-1"></i>Logout
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">
+                                <i class="fas fa-sign-in-alt me-1"></i>Login
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('signup') }}">
+                                <i class="fas fa-user-plus me-1"></i>Sign Up
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li class="nav-item d-flex align-items-center">
+                        <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">
+                            <i class="fas fa-sun" id="themeIcon"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="container mt-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container text-center">
+            <p>&copy; 2024 UniTest. All rights reserved.</p>
+            <p class="mb-0">AI-Powered Learning Platform</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Theme Toggle Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const body = document.body;
+            
+            // Get saved theme or default to light
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            
+            // Apply saved theme
+            applyTheme(savedTheme);
+            
+            // Theme toggle event listener
+            themeToggle.addEventListener('click', function() {
+                const currentTheme = body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                applyTheme(newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
+            
+            function applyTheme(theme) {
+                body.setAttribute('data-theme', theme);
+                
+                if (theme === 'dark') {
+                    themeIcon.className = 'fas fa-moon';
+                    themeToggle.title = 'Switch to Light Mode';
+                } else {
+                    themeIcon.className = 'fas fa-sun';
+                    themeToggle.title = 'Switch to Dark Mode';
+                }
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

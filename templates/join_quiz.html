@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Join Shared Quiz - UniTest{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Join Shared Quiz</h2>
+  <p class="text-muted">Enter the code provided by your teacher to start the quiz.</p>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Quiz Code</label>
+          <input name="code" class="form-control" placeholder="e.g., 7G2KQX" required>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+          <button class="btn btn-primary" type="submit">Join Quiz</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

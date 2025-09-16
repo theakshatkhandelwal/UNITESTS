@@ -1,0 +1,9 @@
+# Flask Configuration
+SECRET_KEY=your-secret-key-here
+FLASK_ENV=production
+
+# Database Configuration
+DATABASE_URL=sqlite:///unittest.db
+
+# Google AI API Key
+GOOGLE_AI_API_KEY=your-google-ai-api-key-here

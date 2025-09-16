@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Quiz Results - UniTest{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Results Header -->
+            <div class="card mb-4">
+                <div class="card-header text-center" style="background: linear-gradient(135deg, var(--gradient-bg), var(--gradient-fg)); color: white;">
+                    <h2 class="mb-2">
+                        <i class="fas fa-trophy me-2"></i>Quiz Results
+                    </h2>
+                    <h4 class="mb-0">{{ topic }} - {{ difficulty_level.title() if difficulty_level else 'Beginner' }} Level</h4>
+                </div>
+            </div>
+
+            <!-- Score Summary -->
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="border-end">
+                                <h3 class="text-primary fw-bold">{{ final_score }}</h3>
+                                <p class="text-muted mb-0">Final Score</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border-end">
+                                <h3 class="text-{% if passed %}success{% else %}danger{% endif %} fw-bold">{{ "%.1f"|format(percentage) }}%</h3>
+                                <p class="text-muted mb-0">Percentage</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h3 class="text-{% if passed %}success{% else %}warning{% endif %} fw-bold">
+                                {% if passed %}
+                                    <i class="fas fa-check-circle me-2"></i>PASSED
+                                {% else %}
+                                    <i class="fas fa-times-circle me-2"></i>NOT PASSED
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Result</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Results -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-list-alt me-2"></i>Question-by-Question Analysis
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% for result in results %}
+                        <div class="border-bottom pb-4 mb-4">
+                            <h5 class="fw-bold mb-3">
+                                <span class="badge bg-primary me-2">Q{{ loop.index }}</span>
+                                {{ result.question }}
+                            </h5>
+
+                            {% if result.type == 'mcq' %}
+                                <!-- MCQ Result -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-2">
+                                            <strong>Your Answer:</strong>
+                                            <span class="ms-2 {% if result.is_correct %}text-success{% else %}text-danger{% endif %}">
+                                                {{ result.user_answer }}
+                                            </span>
+                                        </div>
+                                        {% if not result.is_correct %}
+                                            <div class="mb-2">
+                                                <strong>Correct Answer:</strong>
+                                                <span class="ms-2 text-success">{{ result.correct_answer }}</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 text-md-end">
+                                        <span class="badge {% if result.is_correct %}bg-success{% else %}bg-danger{% endif %} fs-6">
+                                            {% if result.is_correct %}
+                                                <i class="fas fa-check me-1"></i>Correct
+                                            {% else %}
+                                                <i class="fas fa-times me-1"></i>Incorrect
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Subjective Result -->
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="mb-2">
+                                            <strong>Your Answer:</strong>
+                                            <div class="mt-2 p-3 bg-light rounded">
+                                                {{ result.user_answer[:200] }}{% if result.user_answer|length > 200 %}...{% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <strong>Sample Answer:</strong>
+                                            <div class="mt-2 p-3 bg-light rounded">
+                                                {{ result.sample_answer[:200] }}{% if result.sample_answer|length > 200 %}...{% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-md-end">
+                                        <div class="text-center">
+                                            <div class="mb-2">
+                                                <span class="badge bg-info fs-6">{{ result.marks }} marks</span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>AI Score:</strong><br>
+                                                <span class="text-primary fw-bold">{{ "%.1f"|format(result.ai_score * result.marks) }}/{{ result.marks }}</span>
+                                            </div>
+                                            <div>
+                                                <small class="text-muted">({{ "%.0f"|format(result.ai_score * 100) }}%)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="text-center mt-4">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg me-3">
+                    <i class="fas fa-tachometer-alt me-2"></i>Back to Dashboard
+                </a>
+                
+                {% if passed %}
+                    <form method="POST" action="{{ url_for('next_level') }}" style="display: inline;">
+                        <input type="hidden" name="topic" value="{{ topic }}">
+                        <input type="hidden" name="difficulty_level" value="{{ difficulty_level or 'beginner' }}">
+                        <button type="submit" class="btn btn-success btn-lg me-3">
+                            <i class="fas fa-arrow-up me-2"></i>Try Next Level
+                        </button>
+                    </form>
+                {% else %}
+                    <form method="POST" action="{{ url_for('retry_level') }}" style="display: inline;">
+                        <input type="hidden" name="topic" value="{{ topic }}">
+                        <input type="hidden" name="difficulty_level" value="{{ difficulty_level or 'beginner' }}">
+                        <button type="submit" class="btn btn-warning btn-lg me-3">
+                            <i class="fas fa-redo me-2"></i>Retry Level
+                        </button>
+                    </form>
+                {% endif %}
+                
+                <a href="{{ url_for('quiz') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-plus me-2"></i>New Topic
+                </a>
+            </div>
+
+            <!-- Progress Update -->
+            {% if passed %}
+                <div class="alert alert-success mt-4">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-star me-2"></i>Congratulations!
+                    </h5>
+                    <p class="mb-0">You've successfully completed this level! Your progress has been updated and you can now advance to the next Bloom's Taxonomy level for this topic.</p>
+                </div>
+            {% else %}
+                <div class="alert alert-info mt-4">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-info-circle me-2"></i>Keep Learning!
+                    </hh5>
+                    <p class="mb-0">Don't worry if you didn't pass this time. Review the correct answers and try again. Learning is a journey, and every attempt makes you stronger!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

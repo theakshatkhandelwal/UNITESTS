@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Create Quiz - UniTest{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-question-circle me-2"></i>Create Your Quiz
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data">
+                        <!-- Topic and File Selection -->
+                        <div class="mb-4">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <label for="topic" class="form-label fw-bold fs-5">
+                                        <i class="fas fa-book me-2"></i>Choose Your Topic
+                                    </label>
+                                                                                                    <input type="text" class="form-control" id="topic" name="topic" 
+                                           placeholder="e.g., AI, Physics, History..." 
+                                           value="{{ prefill_topic or '' }}">
+                                    <div class="form-text">
+                                        <i class="fas fa-lightbulb me-1"></i>Enter any subject or topic you want to learn about
+                                    </div>
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i><strong>OR</strong> upload a PDF below
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="file_upload" class="form-label fw-bold fs-5">
+                                        <i class="fas fa-file-upload me-2"></i>Upload PDF File
+                                    </label>
+                                    <input type="file" class="form-control" id="file_upload" name="file_upload" 
+                                           accept=".pdf" onchange="handleFileUpload(this)">
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>Upload PDF to extract topic automatically
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Question Type Selection -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold fs-5">
+                                <i class="fas fa-list me-2"></i>Question Type
+                            </label>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="question_type" id="mcq" value="mcq" checked>
+                                        <label class="form-check-label" for="mcq">
+                                            <i class="fas fa-check-square me-2 text-primary"></i>Multiple Choice
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="question_type" id="subjective" value="subjective">
+                                        <label class="form-check-label" for="subjective">
+                                            <i class="fas fa-edit me-2 text-success"></i>Subjective
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="question_type" id="both" value="both">
+                                        <label class="form-check-label" for="both">
+                                            <i class="fas fa-layer-group me-2 text-warning"></i>Both Types
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Difficulty Level Selection -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold fs-5">
+                                <i class="fas fa-layer-group me-2"></i>Difficulty Level
+                            </label>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="difficulty_level" id="beginner" value="beginner" 
+                                               {% if not prefill_difficulty or prefill_difficulty == 'beginner' %}checked{% endif %}>
+                                        <label class="form-check-label" for="beginner">
+                                            <i class="fas fa-seedling me-2 text-success"></i>BEGINNER
+                                            <small class="d-block text-muted">Basic facts & definitions</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="difficulty_level" id="intermediate" value="intermediate"
+                                               {% if prefill_difficulty == 'intermediate' %}checked{% endif %}>
+                                        <label class="form-check-label" for="intermediate">
+                                            <i class="fas fa-cogs me-2 text-warning"></i>INTERMEDIATE
+                                            <small class="d-block text-muted">Application & analysis</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="difficulty_level" id="difficult" value="difficult"
+                                               {% if prefill_difficulty == 'difficult' %}checked{% endif %}>
+                                        <label class="form-check-label" for="difficult">
+                                            <i class="fas fa-brain me-2 text-danger"></i>DIFFICULT
+                                            <small class="d-block text-muted">Critical thinking & synthesis</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Question Counts -->
+                        <div class="mb-4">
+                            <div class="row">
+                                <!-- MCQ Count -->
+                                <div class="col-md-6 mb-3" id="mcq-count-section">
+                                    <label for="mcq_count" class="form-label fw-bold">
+                                        <i class="fas fa-check-square me-2 text-primary"></i>Number of MCQ Questions
+                                    </label>
+                                    <select class="form-select" id="mcq_count" name="mcq_count">
+                                        <option value="1">1 Question</option>
+                                        <option value="2">2 Questions</option>
+                                        <option value="3" selected>3 Questions</option>
+                                        <option value="4">4 Questions</option>
+                                        <option value="5">5 Questions</option>
+                                        <option value="6">6 Questions</option>
+                                        <option value="7">7 Questions</option>
+                                        <option value="8">8 Questions</option>
+                                        <option value="9">9 Questions</option>
+                                        <option value="10">10 Questions</option>
+                                    </select>
+                                </div>
+
+                                <!-- Subjective Count -->
+                                <div class="col-md-6 mb-3" id="subj-count-section" style="display: none;">
+                                    <label for="subj_count" class="form-label fw-bold">
+                                        <i class="fas fa-edit me-2 text-success"></i>Number of Subjective Questions
+                                    </label>
+                                    <select class="form-select" id="subj_count" name="subj_count">
+                                        <option value="1">1 Question</option>
+                                        <option value="2" selected>2 Questions</option>
+                                        <option value="3">3 Questions</option>
+                                        <option value="4">4 Questions</option>
+                                        <option value="5">5 Questions</option>
+                                        <option value="6">6 Questions</option>
+                                        <option value="7">7 Questions</option>
+                                        <option value="8">8 Questions</option>
+                                        <option value="9">9 Questions</option>
+                                        <option value="10">10 Questions</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Features Info -->
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-robot me-2"></i>AI-Powered Features
+                            </h6>
+                            <ul class="mb-0">
+                                <li><strong>Smart Question Generation:</strong> AI creates context-aware questions based on your topic</li>
+                                <li><strong>Difficulty Levels:</strong> Choose from Beginner, Intermediate, or Difficult levels</li>
+                                <li><strong>Question Variety:</strong> Each quiz generates unique questions to avoid repetition</li>
+                                <li><strong>Intelligent Assessment:</strong> AI evaluates subjective answers with detailed feedback</li>
+                                <li><strong>Adaptive Learning:</strong> Progress tracking helps you advance through cognitive levels</li>
+                            </ul>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn">
+                                <i class="fas fa-magic me-2"></i>Generate AI Quiz
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Hidden form for file uploads -->
+                    <form id="fileUploadForm" method="POST" enctype="multipart/form-data" style="display: none;">
+                        <input type="hidden" name="file_upload" id="hiddenFileUpload">
+                    </form>
+                </div>
+            </div>
+
+            <!-- How It Works -->
+            <div class="card mt-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>How It Works
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 60px; height: 60px;">
+                                <span class="fw-bold text-primary">1</span>
+                            </div>
+                            <h6 class="fw-bold">Choose Topic</h6>
+                            <small class="text-muted">Select any subject you want to learn</small>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 60px; height: 60px;">
+                                <span class="fw-bold text-primary">2</span>
+                            </div>
+                            <h6 class="fw-bold">AI Generates</h6>
+                            <small class="text-muted">AI creates personalized questions</small>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 60px; height: 60px;">
+                                <span class="fw-bold text-primary">3</span>
+                            </div>
+                            <h6 class="fw-bold">Take Quiz</h6>
+                            <small class="text-muted">Answer questions and get feedback</small>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 60px; height: 60px;">
+                                <span class="fw-bold text-primary">4</span>
+                            </div>
+                            <h6 class="fw-bold">Track Progress</h6>
+                            <small class="text-muted">Monitor your learning journey</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const questionTypeRadios = document.querySelectorAll('input[name="question_type"]');
+    const mcqSection = document.getElementById('mcq-count-section');
+    const subjSection = document.getElementById('subj-count-section');
+
+    function toggleQuestionCounts() {
+        const selectedType = document.querySelector('input[name="question_type"]:checked').value;
+        
+        if (selectedType === 'mcq') {
+            mcqSection.style.display = 'block';
+            subjSection.style.display = 'none';
+        } else if (selectedType === 'subjective') {
+            mcqSection.style.display = 'none';
+            subjSection.style.display = 'block';
+        } else if (selectedType === 'both') {
+            mcqSection.style.display = 'block';
+            subjSection.style.display = 'block';
+        }
+    }
+
+    questionTypeRadios.forEach(radio => {
+        radio.addEventListener('change', toggleQuestionCounts);
+    });
+
+        // Initialize on page load
+    toggleQuestionCounts();
+    
+    // Form validation - ensure either topic OR PDF is provided
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    form.addEventListener('submit', function(e) {
+        const topic = document.getElementById('topic').value.trim();
+        const fileUpload = document.getElementById('file_upload').files[0];
+        
+        if (!topic && !fileUpload) {
+            e.preventDefault();
+            showAlert('danger', 'Please either enter a topic OR upload a PDF file.');
+            return false;
+        }
+        
+        // If both are provided, prioritize PDF
+        if (topic && fileUpload) {
+            document.getElementById('topic').value = '';
+            showAlert('info', 'PDF uploaded - topic field cleared. Using PDF content.');
+        }
+    });
+});
+
+// File upload handling
+function handleFileUpload(input) {
+    const file = input.files[0];
+    if (file) {
+        const formData = new FormData();
+        formData.append('file_upload', file);
+        
+        // Show loading state
+        const submitBtn = document.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing PDF...';
+        submitBtn.disabled = true;
+        
+        // Upload file to extract topic
+        fetch('/upload_pdf', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('topic').value = data.topic;
+                // Show success message
+                showAlert('success', `Topic extracted from PDF: ${data.topic}`);
+            } else {
+                showAlert('danger', 'Failed to extract topic from PDF. Please enter manually.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('danger', 'Error processing PDF. Please try again.');
+        })
+        .finally(() => {
+            // Reset button
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
+    }
+}
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const form = document.querySelector('form');
+    form.parentNode.insertBefore(alertDiv, form);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

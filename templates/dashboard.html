@@ -1,0 +1,594 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - UniTest{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Welcome Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-gradient text-white" style="background: linear-gradient(135deg, var(--gradient-bg), var(--gradient-fg));">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="fw-bold mb-2">
+                                <i class="fas fa-tachometer-alt me-3"></i>Welcome back, {{ current_user.username }}!
+                            </h2>
+                            <p class="mb-0 fs-5">Ready to continue your AI-powered learning journey?</p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <a href="{{ url_for('quiz') }}" class="btn btn-light btn-lg">
+                                <i class="fas fa-rocket me-2"></i>Start Learning
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.role == 'teacher' %}
+    <!-- Teacher Tools -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3 class="mb-0"><i class="fas fa-chalkboard-teacher me-2"></i>Teacher Tools</h3>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-primary" href="{{ url_for('teacher_create_quiz_simple') }}">
+                        <i class="fas fa-magic me-1"></i>Create Quiz (Topic/Count)
+                    </a>
+                    <a class="btn btn-outline-primary" href="{{ url_for('teacher_create_quiz') }}">
+                        <i class="fas fa-code me-1"></i>Create via JSON
+                    </a>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">My Shared Quizzes</h5>
+                    {% if my_quizzes %}
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Code</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for q in my_quizzes %}
+                                <tr>
+                                    <td>{{ q.title }}</td>
+                                    <td><code>{{ q.code }}</code></td>
+                                    <td>{{ q.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('teacher_quiz_results', code=q.code) }}">
+                                            <i class="fas fa-list-check me-1"></i>Results
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No quizzes yet. Create one and share the code with students.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if current_user.role != 'teacher' %}
+    <!-- Student Join Shared Quiz -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body d-flex flex-wrap justify-content-between align-items-center">
+                    <div class="mb-2 mb-md-0">
+                        <h5 class="mb-1"><i class="fas fa-key me-2"></i>Join a Shared Quiz</h5>
+                        <p class="text-muted mb-0">Enter the code your teacher shared to start.</p>
+                    </div>
+                    <a class="btn btn-outline-secondary" href="{{ url_for('join_quiz') }}">
+                        <i class="fas fa-right-to-bracket me-1"></i>Enter Code
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student History -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0"><i class="fas fa-clock-rotate-left me-2"></i>Your Shared Quiz History</h4>
+                </div>
+                <div class="card-body">
+                    {% if my_submissions %}
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Quiz</th>
+                                    <th>Score</th>
+                                    <th>Submitted</th>
+                                    <th>Review</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in my_submissions %}
+                                <tr>
+                                    <td>{{ s.quiz_id }}</td>
+                                    <td>{{ '%.1f'|format(s.score) }}/{{ '%.1f'|format(s.total) }} ({{ '%.0f'|format(s.percentage) }}%)</td>
+                                    <td>{{ s.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if s.review_unlocked_at and (s.review_unlocked_at <= (now() if false else s.submitted_at)) %}
+                                            <a class="btn btn-sm btn-outline-primary disabled">Open</a>
+                                        {% else %}
+                                            {% set remaining = ((s.review_unlocked_at or s.submitted_at) - s.submitted_at).total_seconds() if s.review_unlocked_at else 900 %}
+                                            <small class="text-muted">Available after 15 min</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No attempts yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 text-center">
+                <div class="card-body p-4">
+                    <i class="fas fa-question-circle fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title fw-bold">Start New Quiz</h5>
+                    <p class="card-text">Choose a topic and let AI generate personalized questions for you.</p>
+                    <a href="{{ url_for('quiz') }}" class="btn btn-primary">
+                        <i class="fas fa-play me-2"></i>Begin Quiz
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 text-center">
+                <div class="card-body p-4">
+                    <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                    <h5 class="card-title fw-bold">View Progress</h5>
+                    <p class="card-text">Track your learning journey across different topics and Bloom's levels.</p>
+                    <a href="#progress-section" class="btn btn-success">
+                        <i class="fas fa-chart-bar me-2"></i>See Progress
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 text-center">
+                <div class="card-body p-4">
+                    <i class="fas fa-brain fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title fw-bold">AI Learning</h5>
+                    <p class="card-text">Learn any topic with AI-powered explanations and interactive content.</p>
+                    <button type="button" class="btn btn-warning text-white" data-bs-toggle="modal" data-bs-target="#aiLearningModal">
+                        <i class="fas fa-graduation-cap me-2"></i>Start Learning
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Learning Progress -->
+    <div class="row" id="progress-section">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Your Learning Progress
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if progress_records %}
+                        <div class="row">
+                            {% for progress in progress_records %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="fw-bold mb-1">
+                                                        <i class="fas fa-book me-2 text-primary"></i>{{ progress.topic }}
+                                                    </h6>
+                                                    <p class="text-muted mb-0">Current Level</p>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge bg-primary fs-6">Level {{ progress.bloom_level }}</span>
+                                                    <small class="d-block text-muted mt-1">
+                                                        {{ progress.created_at.strftime('%b %d, %Y') }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Progress Bar -->
+                                            <div class="mt-3">
+                                                <div class="progress mb-2" style="height: 8px;">
+                                                    {% set percentage = (progress.bloom_level / 6) * 100 %}
+                                                    <div class="progress-bar bg-success" role="progressbar" 
+                                                         style="width: {{ percentage }}%" 
+                                                         aria-valuenow="{{ progress.bloom_level }}" 
+                                                         aria-valuemin="0" 
+                                                         aria-valuemax="6">
+                                                    </div>
+                                                </div>
+                                                <small class="text-muted">{{ progress.bloom_level }}/6 Bloom's Levels</small>
+                                            </div>
+                                            
+                                            <!-- Continue Learning Button -->
+                                            <div class="mt-3">
+                                                <form method="POST" action="{{ url_for('continue_learning') }}" style="display: inline;">
+                                                    <input type="hidden" name="topic" value="{{ progress.topic }}">
+                                                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                                                        <i class="fas fa-play me-2"></i>Continue Learning
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="{{ url_for('quiz') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-plus me-2"></i>Add New Topic
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Progress Yet</h5>
+                            <p class="text-muted">Start your first quiz to begin tracking your learning journey!</p>
+                            <a href="{{ url_for('quiz') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-play me-2"></i>Start Your First Quiz
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Overview -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-star me-2"></i>Platform Features
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-check-circle text-success fa-2x me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="fw-bold">AI-Generated Questions</h6>
+                                    <p class="text-muted mb-0">Get intelligent, context-aware questions for any topic</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-check-circle text-success fa-2x me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="fw-bold">Bloom's Taxonomy</h6>
+                                    <p class="text-muted mb-0">Progress through cognitive levels from basic to advanced</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-check-circle text-success fa-2x me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="fw-bold">Smart Assessment</h6>
+                                    <p class="text-muted mb-0">AI-powered evaluation of subjective answers</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-check-circle text-success fa-2x me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="fw-bold">Progress Tracking</h6>
+                                    <p class="text-muted mb-0">Monitor your learning journey across topics</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Learning Modal -->
+<div class="modal fade" id="aiLearningModal" tabindex="-1" aria-labelledby="aiLearningModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="aiLearningModalLabel">
+                    <i class="fas fa-graduation-cap me-2"></i>AI-Powered Learning
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="aiLearningForm">
+                    <div class="mb-3">
+                        <label for="learningTopic" class="form-label fw-bold">
+                            <i class="fas fa-book me-2"></i>What would you like to learn?
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="learningTopic" 
+                               placeholder="e.g., Quantum Physics, Machine Learning, Ancient History..." required>
+                        <div class="form-text">
+                            <i class="fas fa-lightbulb me-1"></i>Enter any topic and AI will create a personalized learning experience
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="learningLevel" class="form-label fw-bold">
+                            <i class="fas fa-chart-line me-2"></i>Your Current Level
+                        </label>
+                        <select class="form-select" id="learningLevel">
+                            <option value="beginner">Beginner - New to the topic</option>
+                            <option value="intermediate" selected>Intermediate - Some knowledge</option>
+                            <option value="advanced">Advanced - Deep understanding</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="learningStyle" class="form-label fw-bold">
+                            <i class="fas fa-user-graduate me-2"></i>Preferred Learning Style
+                        </label>
+                        <select class="form-select" id="learningStyle">
+                            <option value="practical">Practical - Hands-on examples</option>
+                            <option value="theoretical" selected>Theoretical - Concepts and principles</option>
+                            <option value="visual">Visual - Diagrams and charts</option>
+                            <option value="interactive">Interactive - Questions and discussions</option>
+                        </select>
+                    </div>
+                </form>
+                
+                <div id="learningContent" style="display: none;">
+                    <hr>
+                    <div class="text-center mb-3">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">AI is creating your personalized learning content...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="startLearningBtn">
+                    <i class="fas fa-rocket me-2"></i>Start Learning
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.learning-section {
+    border-left: 3px solid #007bff;
+    padding-left: 15px;
+    margin-bottom: 20px;
+}
+
+.learning-section h6 {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 5px;
+}
+
+.learning-section .mb-1 {
+    background-color: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 5px;
+    margin-bottom: 8px;
+    border-left: 3px solid #28a745;
+}
+
+.learning-section .mb-2 {
+    line-height: 1.6;
+    color: #495057;
+}
+</style>
+
+<script>
+// Function to format AI learning content
+function formatLearningContent(content) {
+    // Clean up the content first
+    let cleanContent = content.trim();
+    
+    // Remove any introductory text before the first ##
+    const firstSectionIndex = cleanContent.indexOf('## ');
+    if (firstSectionIndex > 0) {
+        cleanContent = cleanContent.substring(firstSectionIndex);
+    }
+    
+    // Split content into sections
+    const sections = cleanContent.split('## ');
+    let formattedHTML = '';
+    
+    sections.forEach(section => {
+        if (section.trim()) {
+            const lines = section.split('\n').filter(line => line.trim());
+            const sectionTitle = lines[0].trim();
+            const sectionContent = lines.slice(1);
+            
+            if (sectionTitle && sectionContent.length > 0) {
+                let sectionHTML = '';
+                
+                // Add section title with appropriate styling
+                sectionHTML += `<h6 class="fw-bold text-primary mb-2 mt-3">
+                    <i class="fas fa-${getSectionIcon(sectionTitle)} me-2"></i>${sectionTitle}
+                </h6>`;
+                
+                // Format section content
+                sectionContent.forEach(line => {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine) {
+                        if (trimmedLine.startsWith('•') || trimmedLine.startsWith('✓') || trimmedLine.startsWith('⚠️')) {
+                            sectionHTML += `<div class="mb-1 ms-3">${trimmedLine}</div>`;
+                        } else if (trimmedLine.startsWith('*') || trimmedLine.startsWith('-')) {
+                            // Handle other bullet point formats
+                            sectionHTML += `<div class="mb-1 ms-3">• ${trimmedLine.substring(1).trim()}</div>`;
+                        } else if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
+                            // Handle bold headers within sections
+                            sectionHTML += `<div class="mb-2 fw-bold">${trimmedLine.replace(/\*\*/g, '')}</div>`;
+                        } else {
+                            sectionHTML += `<div class="mb-2">${trimmedLine}</div>`;
+                        }
+                    }
+                });
+                
+                formattedHTML += `<div class="learning-section">${sectionHTML}</div>`;
+            }
+        }
+    });
+    
+    // If no sections were found, try to format as a simple structured content
+    if (!formattedHTML) {
+        const lines = content.split('\n').filter(line => line.trim());
+        let fallbackHTML = '';
+        
+        lines.forEach(line => {
+            const trimmedLine = line.trim();
+            if (trimmedLine) {
+                if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
+                    // Bold headers
+                    fallbackHTML += `<h6 class="fw-bold text-primary mb-2 mt-3">${trimmedLine.replace(/\*\*/g, '')}</h6>`;
+                } else if (trimmedLine.startsWith('*') || trimmedLine.startsWith('-')) {
+                    // Bullet points
+                    fallbackHTML += `<div class="mb-1 ms-3">• ${trimmedLine.substring(1).trim()}</div>`;
+                } else {
+                    // Regular text
+                    fallbackHTML += `<div class="mb-2">${trimmedLine}</div>`;
+                }
+            }
+        });
+        
+        formattedHTML = `<div class="learning-section">${fallbackHTML}</div>`;
+    }
+    
+    return formattedHTML || `<div class="mb-3">${content.replace(/\n/g, '<br>')}</div>`;
+}
+
+// Function to get appropriate icon for each section
+function getSectionIcon(sectionTitle) {
+    const title = sectionTitle.toLowerCase();
+    if (title.includes('overview')) return 'info-circle';
+    if (title.includes('concept')) return 'lightbulb';
+    if (title.includes('objective')) return 'target';
+    if (title.includes('approach') || title.includes('study')) return 'route';
+    if (title.includes('misconception')) return 'exclamation-triangle';
+    if (title.includes('step')) return 'arrow-right';
+    return 'book';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const startLearningBtn = document.getElementById('startLearningBtn');
+    const learningContent = document.getElementById('learningContent');
+    const aiLearningForm = document.getElementById('aiLearningForm');
+    
+    startLearningBtn.addEventListener('click', function() {
+        const topic = document.getElementById('learningTopic').value.trim();
+        const level = document.getElementById('learningLevel').value;
+        const style = document.getElementById('learningStyle').value;
+        
+        if (!topic) {
+            alert('Please enter a topic to learn about.');
+            return;
+        }
+        
+        // Show loading content
+        learningContent.style.display = 'block';
+        startLearningBtn.disabled = true;
+        startLearningBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+        
+        // Send request to AI learning endpoint
+        fetch('/ai_learn', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                topic: topic,
+                level: level,
+                style: style
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Parse and format the AI content
+                const formattedContent = formatLearningContent(data.content);
+                
+                learningContent.innerHTML = `
+                    <hr>
+                    <div class="learning-result">
+                        <h5 class="text-success mb-3">
+                            <i class="fas fa-check-circle me-2"></i>Your Learning Path: ${topic}
+                        </h5>
+                        <div class="card">
+                            <div class="card-body">
+                                ${formattedContent}
+                                <div class="text-center mt-4">
+                                    <a href="/quiz?topic=${encodeURIComponent(topic)}" class="btn btn-primary">
+                                        <i class="fas fa-question-circle me-2"></i>Take Quiz on This Topic
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                learningContent.innerHTML = `
+                    <hr>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>${data.error}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            learningContent.innerHTML = `
+                <hr>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Error generating learning content. Please try again.
+                </div>
+            `;
+        })
+        .finally(() => {
+            startLearningBtn.disabled = false;
+            startLearningBtn.innerHTML = '<i class="fas fa-rocket me-2"></i>Start Learning';
+        });
+    });
+});
+</script>
+{% endblock %}

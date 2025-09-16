@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Create Shared Quiz - UniTest{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Create Shared Quiz</h2>
+  <p class="text-muted">Only teachers can create shared quizzes. Provide a title and paste questions JSON.</p>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Quiz Title</label>
+          <input name="title" class="form-control" placeholder="e.g., Algebra Basics Quiz" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Questions JSON</label>
+          <textarea name="questions_json" class="form-control" rows="10" placeholder='[
+  {"question":"2+2?","type":"mcq","options":["A. 3","B. 4","C. 5","D. 6"],"answer":"B","marks":1},
+  {"question":"Explain Pythagoras theorem","type":"subjective","answer":"a^2 + b^2 = c^2","marks":10}
+]'
+          required></textarea>
+          <div class="form-text">Supported types: "mcq" with options and answer letter; "subjective" with sample answer and marks.</div>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+          <button class="btn btn-primary" type="submit">Create Quiz</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
