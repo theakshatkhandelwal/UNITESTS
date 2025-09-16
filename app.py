@@ -65,7 +65,21 @@ elif database_url and database_url.startswith('postgresql://'):
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///unittest.db'
+
+# Enhanced database configuration for Vercel/NeonDB
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+    'pool_timeout': 20,
+    'max_overflow': 0,
+    'pool_size': 1,
+    'connect_args': {
+        'sslmode': 'require',
+        'connect_timeout': 10,
+        'application_name': 'unittest-app'
+    }
+}
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -426,6 +440,36 @@ def fix_password_column():
             "message": f"Failed to fix password column: {str(e)}"
         }), 500
 
+@app.route('/test-db')
+def test_database():
+    """Test database connection and show connection info"""
+    try:
+        with app.app_context():
+            # Test basic connection
+            result = db.session.execute('SELECT 1 as test').fetchone()
+            
+            # Get connection info
+            engine = db.engine
+            connection_info = {
+                'database_url': app.config['SQLALCHEMY_DATABASE_URI'][:50] + '...' if len(app.config['SQLALCHEMY_DATABASE_URI']) > 50 else app.config['SQLALCHEMY_DATABASE_URI'],
+                'pool_size': engine.pool.size(),
+                'checked_in': engine.pool.checkedin(),
+                'checked_out': engine.pool.checkedout(),
+                'overflow': engine.pool.overflow(),
+                'test_query_result': result[0] if result else None
+            }
+            
+            return jsonify({
+                "status": "success",
+                "message": "Database connection successful",
+                "connection_info": connection_info
+            })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Database connection failed: {str(e)}"
+        }), 500
+
 @app.route('/sitemap.xml')
 def sitemap():
     return send_file('static/sitemap.xml', mimetype='application/xml')
@@ -474,7 +518,16 @@ def signup():
         except Exception as e:
             print(f"Error in signup: {str(e)}")
             db.session.rollback()
-            flash(f'Signup failed: {str(e)}', 'error')
+            
+            # Handle specific database connection errors
+            error_msg = str(e)
+            if 'SSL connection has been closed' in error_msg:
+                flash('Database connection issue. Please try again.', 'error')
+            elif 'connection' in error_msg.lower():
+                flash('Database connection problem. Please try again.', 'error')
+            else:
+                flash(f'Signup failed: {error_msg}', 'error')
+            
             return redirect(url_for('signup'))
 
     return render_template('signup.html')
