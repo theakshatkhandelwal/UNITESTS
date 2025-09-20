@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import google.generativeai as genai
 import json
 import re
+import pandas as pd
 # Conditional imports for optional dependencies
 try:
     import PyPDF2
@@ -1554,6 +1555,101 @@ def download_pdf():
         as_attachment=True,
         download_name=f"Quiz_{topic}_Level{bloom_level}.pdf",
         mimetype='application/pdf'
+    )
+
+# Download quiz results as CSV
+@app.route('/teacher/quiz/<code>/results/download/csv')
+@login_required
+def download_quiz_results_csv(code):
+    guard = require_teacher()
+    if guard:
+        return guard
+    
+    quiz = db.session.query(Quiz).filter_by(code=code.upper(), created_by=current_user.id).first()
+    if not quiz:
+        flash('Quiz not found', 'error')
+        return redirect(url_for('dashboard'))
+    
+    submissions = db.session.query(QuizSubmission).filter_by(quiz_id=quiz.id).order_by(QuizSubmission.submitted_at.desc()).all()
+    student_map = {u.id: u for u in db.session.query(User).filter(User.id.in_([s.student_id for s in submissions])).all()}
+    
+    # Prepare data for CSV
+    data = []
+    for s in submissions:
+        student = student_map.get(s.student_id)
+        data.append({
+            'Student': student.username if student else str(s.student_id),
+            'Score': f"{s.score:.1f}/{s.total:.1f}",
+            'Percentage': f"{s.percentage:.0f}%",
+            'Status': 'Passed' if s.passed else 'Failed',
+            'Integrity': 'Clean' if s.is_full_completion else 'Hold',
+            'Answered Questions': f"{s.answered_count}/{s.question_count}",
+            'Exited Fullscreen': 'Yes' if s.fullscreen_exit_flag else 'No',
+            'Submitted At': s.submitted_at.strftime('%Y-%m-%d %H:%M:%S')
+        })
+    
+    # Create DataFrame and CSV
+    df = pd.DataFrame(data)
+    csv_buffer = io.StringIO()
+    df.to_csv(csv_buffer, index=False)
+    csv_data = csv_buffer.getvalue()
+    
+    # Create BytesIO for send_file
+    output = io.BytesIO()
+    output.write(csv_data.encode('utf-8'))
+    output.seek(0)
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f"Quiz_Results_{quiz.title}_{code}.csv",
+        mimetype='text/csv'
+    )
+
+# Download quiz results as XLSX
+@app.route('/teacher/quiz/<code>/results/download/xlsx')
+@login_required
+def download_quiz_results_xlsx(code):
+    guard = require_teacher()
+    if guard:
+        return guard
+    
+    quiz = db.session.query(Quiz).filter_by(code=code.upper(), created_by=current_user.id).first()
+    if not quiz:
+        flash('Quiz not found', 'error')
+        return redirect(url_for('dashboard'))
+    
+    submissions = db.session.query(QuizSubmission).filter_by(quiz_id=quiz.id).order_by(QuizSubmission.submitted_at.desc()).all()
+    student_map = {u.id: u for u in db.session.query(User).filter(User.id.in_([s.student_id for s in submissions])).all()}
+    
+    # Prepare data for XLSX
+    data = []
+    for s in submissions:
+        student = student_map.get(s.student_id)
+        data.append({
+            'Student': student.username if student else str(s.student_id),
+            'Score': f"{s.score:.1f}/{s.total:.1f}",
+            'Percentage': f"{s.percentage:.0f}%",
+            'Status': 'Passed' if s.passed else 'Failed',
+            'Integrity': 'Clean' if s.is_full_completion else 'Hold',
+            'Answered Questions': f"{s.answered_count}/{s.question_count}",
+            'Exited Fullscreen': 'Yes' if s.fullscreen_exit_flag else 'No',
+            'Submitted At': s.submitted_at.strftime('%Y-%m-%d %H:%M:%S')
+        })
+    
+    # Create DataFrame and XLSX
+    df = pd.DataFrame(data)
+    xlsx_buffer = io.BytesIO()
+    with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Quiz Results', index=False)
+    
+    xlsx_buffer.seek(0)
+    
+    return send_file(
+        xlsx_buffer,
+        as_attachment=True,
+        download_name=f"Quiz_Results_{quiz.title}_{code}.xlsx",
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
 # Error handlers
