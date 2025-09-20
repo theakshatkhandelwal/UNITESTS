@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "api/index.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     }
   ],
   "routes": [
@@ -23,5 +26,16 @@
       "src": "/(.*)",
       "dest": "api/index.py"
     }
-  ]
+  ],
+  "env": {
+    "SECRET_KEY": "@secret_key",
+    "GOOGLE_AI_API_KEY": "@google_ai_api_key",
+    "DATABASE_URL": "@database_url",
+    "FLASK_ENV": "production"
+  },
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 30
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import os
+import sys
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -69,18 +70,30 @@ else:
 
 # Enhanced database configuration for Vercel/NeonDB
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,
-    'pool_recycle': 300,
-    'pool_timeout': 20,
-    'max_overflow': 0,
-    'pool_size': 1,
-    'connect_args': {
-        'sslmode': 'require',
-        'connect_timeout': 10,
-        'application_name': 'unittest-app'
+
+# Only apply PostgreSQL-specific SSL settings if using PostgreSQL
+if database_url and ('postgresql://' in database_url or 'postgres://' in database_url):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'pool_timeout': 20,
+        'max_overflow': 0,
+        'pool_size': 1,
+        'connect_args': {
+            'sslmode': 'require',
+            'connect_timeout': 10,
+            'application_name': 'unittest-app'
+        }
     }
-}
+else:
+    # SQLite configuration (no SSL settings)
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'pool_timeout': 20,
+        'max_overflow': 0,
+        'pool_size': 1
+    }
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -328,7 +341,36 @@ def process_document(file_path):
 # Routes
 @app.route('/')
 def home():
+    # Initialize database if needed (for Vercel)
+    if os.environ.get('VERCEL'):
+        try:
+            init_database()
+        except Exception as e:
+            print(f"Database init warning: {e}")
+    
     return render_template('home.html')
+
+@app.route('/debug')
+def debug_info():
+    """Debug endpoint for Vercel troubleshooting"""
+    try:
+        return {
+            'status': 'ok',
+            'environment': {
+                'has_secret_key': bool(os.environ.get('SECRET_KEY')),
+                'has_google_api': bool(os.environ.get('GOOGLE_AI_API_KEY')),
+                'has_database_url': bool(os.environ.get('DATABASE_URL')),
+                'is_vercel': bool(os.environ.get('VERCEL')),
+                'python_version': sys.version,
+                'database_url_preview': os.environ.get('DATABASE_URL', 'Not set')[:50] + '...' if os.environ.get('DATABASE_URL') else 'Not set'
+            },
+            'database_config': {
+                'sqlalchemy_uri': app.config.get('SQLALCHEMY_DATABASE_URI', 'Not set')[:50] + '...' if app.config.get('SQLALCHEMY_DATABASE_URI') else 'Not set',
+                'track_modifications': app.config.get('SQLALCHEMY_TRACK_MODIFICATIONS', False)
+            }
+        }
+    except Exception as e:
+        return {'error': str(e), 'status': 'error'}, 500
 
 @app.route('/health')
 def health_check():
@@ -1662,16 +1704,22 @@ def internal_error(error):
 def not_found_error(error):
     return render_template('error.html', error="Page Not Found"), 404
 
-# Ensure database is created
-with app.app_context():
+# Database initialization function
+def init_database():
+    """Initialize database tables - called when needed"""
     try:
-        db.create_all()
-        print("Database initialized successfully!")
-        print(f"Using database: {app.config['SQLALCHEMY_DATABASE_URI']}")
+        with app.app_context():
+            db.create_all()
+            print("Database initialized successfully!")
+            print(f"Using database: {app.config['SQLALCHEMY_DATABASE_URI']}")
     except Exception as e:
         print(f"Database initialization error: {str(e)}")
         print(f"Error type: {type(e).__name__}")
         # Continue running the app even if database fails
+
+# Initialize database only if not in Vercel environment
+if not os.environ.get('VERCEL'):
+    init_database()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
