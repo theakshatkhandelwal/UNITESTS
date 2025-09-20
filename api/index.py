@@ -38,6 +38,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(120), nullable=False)
+    role = db.Column(db.String(20), default='student', nullable=False)  # 'student' or 'teacher'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Progress(db.Model):
@@ -46,6 +47,54 @@ class Progress(db.Model):
     topic = db.Column(db.String(100), nullable=False)
     bloom_level = db.Column(db.Integer, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# Shared Quiz Models
+class Quiz(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    code = db.Column(db.String(10), unique=True, nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    difficulty = db.Column(db.String(20), default='beginner')  # beginner/intermediate/advanced
+    duration_minutes = db.Column(db.Integer)  # optional time limit for test
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class QuizQuestion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+    question = db.Column(db.Text, nullable=False)
+    options_json = db.Column(db.Text)  # JSON array for MCQ options like ["A. ...","B. ...","C. ...","D. ..."]
+    answer = db.Column(db.String(10))  # For MCQ store letter like 'A'; for subjective can store sample answer
+    qtype = db.Column(db.String(20), default='mcq')  # 'mcq' or 'subjective'
+    marks = db.Column(db.Integer, default=1)
+
+class QuizSubmission(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    score = db.Column(db.Float, default=0.0)
+    total = db.Column(db.Float, default=0.0)
+    percentage = db.Column(db.Float, default=0.0)
+    passed = db.Column(db.Boolean, default=False)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # unlock review after 15 minutes
+    review_unlocked_at = db.Column(db.DateTime)
+    # flag if student exited fullscreen during test
+    fullscreen_exit_flag = db.Column(db.Boolean, default=False)
+    # counts to determine clean vs hold
+    answered_count = db.Column(db.Integer, default=0)
+    question_count = db.Column(db.Integer, default=0)
+    is_full_completion = db.Column(db.Boolean, default=False)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed = db.Column(db.Boolean, default=False)
+
+class QuizAnswer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    submission_id = db.Column(db.Integer, db.ForeignKey('quiz_submission.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('quiz_question.id'), nullable=False)
+    user_answer = db.Column(db.Text)
+    is_correct = db.Column(db.Boolean)
+    ai_score = db.Column(db.Float)  # 0..1 for subjective
+    scored_marks = db.Column(db.Float, default=0.0)
 
 @login_manager.user_loader
 def load_user(user_id):
