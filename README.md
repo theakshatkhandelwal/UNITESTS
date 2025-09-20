@@ -366,5 +366,3 @@ If you have any questions or need help:
 
 ⭐ **Star this repository if you found it helpful!**
 
-</div>#   T r i g g e r   V e r c e l   d e p l o y m e n t  
- 
