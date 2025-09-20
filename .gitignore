@@ -72,3 +72,4 @@ nltk_data/
 
 # PDF uploads (if any)
 uploads/
+.vercel
