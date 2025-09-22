@@ -20,7 +20,17 @@
   ],
   "functions": {
     "api/index.py": {
-      "maxDuration": 20
+      "maxDuration": 20,
+      "excludeFiles": [
+        "venv/**",
+        "instance/**",
+        "**/*.db",
+        "**/*.pdf",
+        "**/*.xlsx",
+        "**/*.csv",
+        "**/__pycache__/**",
+        "**/*.log"
+      ]
     }
   }
 }
